@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PinMeTo</title>
+    <!-- Load dependencies with integrity checks -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --background: #f8f9fa;
+            --text: #2c3e50;
+            --shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .hero {
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/api/placeholder/1920/400');
+            background-size: cover;
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Enhanced Filter Styles */
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .filter-header h2 {
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: var(--secondary);
+            outline: none;
+        }
+
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin: 5px;
+        }
+
+        .filter-badge .remove {
+            margin-left: 5px;
+            cursor: pointer;
+            color: var(--accent);
+        }
+
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .results-info {
+            background: var(--background);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        /* Map and Store List Section */
+        .map-section {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            height: 500px;
+            margin-bottom: 20px;
+        }
+
+        #map {
+            height: 100%;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+        }
+
+        .store-list {
+            background: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .store-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .store-item:hover {
+            background: var(--background);
+            transform: translateX(5px);
+        }
+
+        .store-item.active {
+            background: var(--secondary);
+            color: white;
+        }
+
+        /* Store Cards Grid */
+        .stores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .store-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .store-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .store-image {
+            height: 200px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .store-content {
+            padding: 20px;
+        }
+
+        .store-card h3 {
+            color: var(--text);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .offer-tag {
+            background: var(--accent);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+        }
+
+        /* Buttons and Interactive Elements */
+        .btn {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .btn.secondary {
+            background: #f0f0f0;
+            color: var(--text);
+        }
+
+        .sort-options {
+            position: relative;
+            display: inline-block;
+        }
+
+        .sort-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 5px;
+            box-shadow: var(--shadow);
+            display: none;
+            z-index: 100;
+        }
+
+        .sort-menu.active {
+            display: block;
+        }
+
+        .sort-option {
+            padding: 8px 15px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .sort-option:hover {
+            background: var(--background);
+        }
+
+        /* Loading Animation */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Animations */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .map-section {
+                grid-template-columns: 1fr;
+            }
+
+            .store-list {
+                height: 300px;
+            }
+
+            .filter-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+        }
+
+        /* Debug Panel */
+        #debug {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            font-family: monospace;
+            max-width: 300px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-tshirt"></i>
+                S&M
+            </div>
+            <button class="btn" onclick="getUserLocation()">
+                <i class="fas fa-location-arrow"></i>
+                Find Nearest Store
+            </button>
+        </div>
+    </div>
+
+    <div class="hero">
+        <h1>Find Your Style Nearby</h1>
+        <p>Discover amazing deals at our locations nationwide</p>
+    </div>
+
+    <div class="container">
+        <div class="filters">
+            <div class="filter-header">
+                <h2>Filter Stores</h2>
+                <div class="filter-actions">
+                    <button class="btn secondary" onclick="resetFilters()">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                    <div class="sort-options">
+                        <button class="btn secondary" onclick="toggleSortMenu()">
+                            <i class="fas fa-sort"></i> Sort
+                        </button>
+                        <div class="sort-menu" id="sortMenu">
+                            <div class="sort-option" onclick="sortStores('name')">Name (A-Z)</div>
+                            <div class="sort-option" onclick="sortStores('name', true)">Name (Z-A)</div>
+                            <div class="sort-option" onclick="sortStores('distance')">Distance</div>
+                            <div class="sort-option" onclick="sortStores('offers')">Most Offers</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label>Search</label>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Search stores, offers, or locations..."
+                        oninput="debounceFilter()"
+                    >
+                </div>
+                <div class="filter-group">
+                    <label>Category</label>
+                    <select id="categoryFilter" onchange="applyFilters()">
+                        <option value="">All Categories</option>
+                        <option value="casual">Casual Wear</option>
+                        <option value="formal">Formal Wear</option>
+                        <option value="sports">Sports Wear</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Offer Type</label>
+                    <select id="offerFilter" onchange="applyFilters()">
+                        <option value="">All Offers</option>
+                        <option value="clearance">Clearance</option>
+                        <option value="seasonal">Seasonal</option>
+                        <option value="special">Special Deals</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Distance</label>
+                    <select id="distanceFilter" onchange="applyFilters()">
+                        <option value="">Any Distance</option>
+                        <option value="5">Within 5 miles</option>
+                        <option value="10">Within 10 miles</option>
+                        <option value="20">Within 20 miles</option>
+                        <option value="50">Within 50 miles</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="active-filters" id="activeFilters"></div>
+            <div class="results-info" id="resultsInfo"></div>
+        </div>
+
+        <div class="map-section">
+            <div id="map"></div>
+            <div class="store-list" id="storeList"></div>
+        </div>
+
+        <div class="stores-grid" id="storesContainer"></div>
+    </div>
+
+    <div class="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <div id="debug"></div>
+
+    <!-- Previous JavaScript code remains exactly the same -->
+    <script>
+        // Insert all the JavaScript code from the previous version here
+        // Including the store data, filtering functions, and map initialization
+         // Debug logging function
+         function log(message) {
+            const debug = document.getElementById('debug');
+            debug.innerHTML += `<div>${message}</div>`;
+            console.log(message);
+        }
+
+        // Sample store data
+        const stores = [
+        {
+            id: 1,
+            name: "Downtown Fashion Hub",
+            address: "123 Main St, New York, NY",
+            coordinates: [40.7128, -74.0060],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "clearance",
+                    title: "Summer Clearance",
+                    discount: "50% OFF"
+                },
+                {
+                    type: "special",
+                    title: "Denim Collection",
+                    discount: "Buy 1 Get 1 Free"
+                }
+            ]
+        },
+        {
+            id: 2,
+            name: "Fashion Valley Store",
+            address: "456 Fashion Ave, Los Angeles, CA",
+            coordinates: [34.0522, -118.2437],
+            category: "formal",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "seasonal",
+                    title: "Winter Collection",
+                    discount: "30% OFF"
+                }
+            ]
+        },
+        {
+            id: 3,
+            name: "Chicago Style Center",
+            address: "789 Michigan Ave, Chicago, IL",
+            coordinates: [41.8781, -87.6298],
+            category: "sports",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "special",
+                    title: "Athleisure Collection",
+                    discount: "40% OFF"
+                },
+                {
+                    type: "clearance",
+                    title: "Last Season Sports Gear",
+                    discount: "60% OFF"
+                }
+            ]
+        },
+        {
+            id: 4,
+            name: "Miami Beach Fashion",
+            address: "321 Ocean Drive, Miami, FL",
+            coordinates: [25.7617, -80.1918],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "seasonal",
+                    title: "Summer Beachwear",
+                    discount: "25% OFF"
+                }
+            ]
+        },
+        {
+            id: 5,
+            name: "Boston Boutique",
+            address: "555 Newbury St, Boston, MA",
+            coordinates: [42.3601, -71.0589],
+            category: "formal",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "clearance",
+                    title: "Formal Wear Clearance",
+                    discount: "45% OFF"
+                }
+            ]
+        },
+        {
+            id: 6,
+            name: "Seattle Style Studio",
+            address: "888 Pike St, Seattle, WA",
+            coordinates: [47.6062, -122.3321],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "seasonal",
+                    title: "Rain Gear Collection",
+                    discount: "35% OFF"
+                }
+            ]
+        },
+        {
+            id: 7,
+            name: "Denver Active Wear",
+            address: "444 16th St, Denver, CO",
+            coordinates: [39.7392, -104.9903],
+            category: "sports",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "special",
+                    title: "Hiking Gear",
+                    discount: "30% OFF"
+                }
+            ]
+        },
+        {
+            id: 8,
+            name: "Houston Fashion Mall",
+            address: "777 Texas Ave, Houston, TX",
+            coordinates: [29.7604, -95.3698],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "clearance",
+                    title: "Spring Collection",
+                    discount: "55% OFF"
+                }
+            ]
+        },
+        {
+            id: 9,
+            name: "San Francisco Style House",
+            address: "999 Market St, San Francisco, CA",
+            coordinates: [37.7749, -122.4194],
+            category: "formal",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "special",
+                    title: "Designer Collection",
+                    discount: "20% OFF"
+                }
+            ]
+        },
+        {
+            id: 10,
+            name: "Atlanta Fashion Center",
+            address: "333 Peachtree St, Atlanta, GA",
+            coordinates: [33.7490, -84.3880],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "seasonal",
+                    title: "Fall Collection",
+                    discount: "40% OFF"
+                }
+            ]
+        },
+        {
+            id: 11,
+            name: "Phoenix Outlet Store",
+            address: "222 Desert Ave, Phoenix, AZ",
+            coordinates: [33.4484, -112.0740],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "clearance",
+                    title: "Summer Styles",
+                    discount: "70% OFF"
+                }
+            ]
+        },
+        {
+            id: 12,
+            name: "Portland Eco Fashion",
+            address: "111 Pearl District, Portland, OR",
+            coordinates: [45.5155, -122.6789],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "special",
+                    title: "Sustainable Collection",
+                    discount: "25% OFF"
+                }
+            ]
+        },
+        {
+            id: 13,
+            name: "Las Vegas Luxury Store",
+            address: "555 Strip Ave, Las Vegas, NV",
+            coordinates: [36.1699, -115.1398],
+            category: "formal",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "special",
+                    title: "Evening Wear",
+                    discount: "30% OFF"
+                }
+            ]
+        },
+        {
+            id: 14,
+            name: "Nashville Fashion House",
+            address: "444 Broadway, Nashville, TN",
+            coordinates: [36.1627, -86.7816],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "seasonal",
+                    title: "Country Collection",
+                    discount: "35% OFF"
+                }
+            ]
+        },
+        {
+            id: 15,
+            name: "Minneapolis Winter Store",
+            address: "777 Mall Ave, Minneapolis, MN",
+            coordinates: [44.9778, -93.2650],
+            category: "sports",
+            image: "https://via.placeholder.com/400x300",
+            offers: [
+                {
+                    type: "seasonal",
+                    title: "Winter Sports Gear",
+                    discount: "45% OFF"
+                }
+            ]
+        },
+
+        {
+            id: 16,
+            name: "Stockholm City Fashion",
+            address: "Drottninggatan 53, 111 21 Stockholm",
+            coordinates: [59.3293, 18.0686],
+            category: "formal",
+            image: "https://via.placeholder.com/400x300",
+            phone: "08-123 45 67",
+            hours: "Mon-Fri: 10-19, Sat: 10-18, Sun: 11-17",
+            offers: [
+                {
+                    type: "seasonal",
+                    title: "Vinter Kollektion",
+                    discount: "30% OFF",
+                    description: "Winter fashion essentials"
+                },
+                {
+                    type: "special",
+                    title: "Swedish Design",
+                    discount: "20% OFF",
+                    description: "Local designer collection"
+                }
+            ]
+        },
+        {
+            id: 17,
+            name: "Göteborg Fashion House",
+            address: "Kungsgatan 15, 411 19 Göteborg",
+            coordinates: [57.7089, 11.9746],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            phone: "031-123 45 67",
+            hours: "Mon-Sat: 10-18, Sun: 12-16",
+            offers: [
+                {
+                    type: "clearance",
+                    title: "Autumn Sale",
+                    discount: "40% OFF",
+                    description: "Last season's collection"
+                }
+            ]
+        },
+        {
+            id: 18,
+            name: "Malmö Style Center",
+            address: "Södergatan 28, 211 34 Malmö",
+            coordinates: [55.6050, 13.0038],
+            category: "sports",
+            image: "https://via.placeholder.com/400x300",
+            phone: "040-123 45 67",
+            hours: "Mon-Sun: 10-20",
+            offers: [
+                {
+                    type: "special",
+                    title: "Sports Collection",
+                    discount: "25% OFF",
+                    description: "Active wear and equipment"
+                }
+            ]
+        },
+        {
+            id: 19,
+            name: "Uppsala Fashion Gallery",
+            address: "Dragarbrunnsgatan 35, 753 20 Uppsala",
+            coordinates: [59.8586, 17.6389],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            phone: "018-123 45 67",
+            hours: "Mon-Fri: 10-18, Sat: 10-16",
+            offers: [
+                {
+                    type: "seasonal",
+                    title: "Student Special",
+                    discount: "15% OFF",
+                    description: "With valid student ID"
+                }
+            ]
+        },
+        {
+            id: 20,
+            name: "Västerås Mode",
+            address: "Stora gatan 42, 722 12 Västerås",
+            coordinates: [59.6112, 16.5448],
+            category: "formal",
+            image: "https://via.placeholder.com/400x300",
+            phone: "021-123 45 67",
+            hours: "Mon-Sat: 10-17",
+            offers: [
+                {
+                    type: "clearance",
+                    title: "Formal Wear",
+                    discount: "35% OFF",
+                    description: "Business attire collection"
+                }
+            ]
+        },
+        {
+            id: 21,
+            name: "Örebro Fashion Outlet",
+            address: "Drottninggatan 24, 702 22 Örebro",
+            coordinates: [59.2747, 15.2066],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            phone: "019-123 45 67",
+            hours: "Mon-Sun: 10-19",
+            offers: [
+                {
+                    type: "special",
+                    title: "Outlet Prices",
+                    discount: "Up to 70% OFF",
+                    description: "Premium brands at outlet prices"
+                }
+            ]
+        },
+        {
+            id: 22,
+            name: "Linköping Fashion Hub",
+            address: "Storgatan 31, 582 23 Linköping",
+            coordinates: [58.4108, 15.6214],
+            category: "sports",
+            image: "https://via.placeholder.com/400x300",
+            phone: "013-123 45 67",
+            hours: "Mon-Fri: 10-18, Sat: 10-15",
+            offers: [
+                {
+                    type: "seasonal",
+                    title: "Spring Collection",
+                    discount: "25% OFF",
+                    description: "New arrivals for spring"
+                }
+            ]
+        },
+        {
+            id: 23,
+            name: "Helsingborg Style Store",
+            address: "Kullagatan 30, 252 20 Helsingborg",
+            coordinates: [56.0465, 12.6945],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            phone: "042-123 45 67",
+            hours: "Mon-Sat: 10-18",
+            offers: [
+                {
+                    type: "clearance",
+                    title: "Summer Style",
+                    discount: "45% OFF",
+                    description: "Beach and summer fashion"
+                }
+            ]
+        },
+        {
+            id: 24,
+            name: "Norrköping Fashion Center",
+            address: "Drottninggatan 42, 602 24 Norrköping",
+            coordinates: [58.5877, 16.1924],
+            category: "formal",
+            image: "https://via.placeholder.com/400x300",
+            phone: "011-123 45 67",
+            hours: "Mon-Fri: 10-19, Sat-Sun: 11-17",
+            offers: [
+                {
+                    type: "special",
+                    title: "Wedding Collection",
+                    discount: "20% OFF",
+                    description: "Special occasion wear"
+                }
+            ]
+        },
+        {
+            id: 25,
+            name: "Jönköping Mode",
+            address: "Östra Storgatan 33, 553 21 Jönköping",
+            coordinates: [57.7826, 14.1618],
+            category: "sports",
+            image: "https://via.placeholder.com/400x300",
+            phone: "036-123 45 67",
+            hours: "Mon-Sun: 10-18",
+            offers: [
+                {
+                    type: "seasonal",
+                    title: "Outdoor Collection",
+                    discount: "30% OFF",
+                    description: "Hiking and outdoor wear"
+                }
+            ]
+        },
+        {
+            id: 26,
+            name: "Södertälje Fashion House",
+            address: "Storgatan 15, 151 72 Södertälje",
+            coordinates: [59.1954, 17.6241],
+            category: "casual",
+            image: "https://via.placeholder.com/400x300",
+            phone: "08-550 123 45",
+            hours: "Mon-Sat: 10-18, Sun: 11-16",
+            offers: [
+                {
+                    type: "special",
+                    title: "Family Weekend",
+                    discount: "25% OFF",
+                    description: "Special weekend discounts"
+                }
+            ]
+        },
+        {
+            id: 27,
+            name: "Umeå Style Gallery",
+            address: "Kungsgatan 48, 903 26 Umeå",
+            coordinates: [63.8268, 20.2663],
+            category: "formal",
+            image: "https://via.placeholder.com/400x300",
+            phone: "090-123 45 67",
+            hours: "Mon-Fri: 10-18, Sat: 10-15",
+            offers: [
+                {
+                    type: "clearance",
+                    title: "Winter Fashion",
+                    discount: "50% OFF",
+                    description: "Winter collection clearance"
+                }
+            ]
+        }
+    ];
+
+    
+    <!-- Add this script section at the bottom of your HTML, just before the closing body tag -->
+
+        let map;
+        let markers = [];
+        let userLocation = null;
+        let currentFilters = {
+        search: '',
+        category: '',
+        offerType: '',
+        distance: '',
+        sortBy: 'name',
+        sortDesc: false
+    };
+
+        // Initialize map
+        function initMap() {
+            console.log('Initializing map...');
+            try {
+                map = L.map('map').setView([59.3293, 18.0686], 6); // Centers on Stockholm
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+                console.log('Map initialized successfully');
+                return true;
+            } catch (error) {
+                console.error('Error initializing map:', error);
+                return false;
+            }
+        }
+
+        // Add marker to map
+        function addMarker(store) {
+            try {
+                const marker = L.marker(store.coordinates)
+                    .bindPopup(`
+                        <div style="text-align: center;">
+                            <h3>${store.name}</h3>
+                            <p>${store.address}</p>
+                            <button onclick="showStoreDetails(${store.id})" 
+                                    style="background: #3498db; color: white; border: none; 
+                                           padding: 5px 10px; border-radius: 5px; margin-top: 5px;">
+                                View Details
+                            </button>
+                        </div>
+                    `);
+                marker.addTo(map);
+                markers.push(marker);
+            } catch (error) {
+                console.error('Error adding marker:', error);
+            }
+        }
+
+        // Add store to list
+        function addToList(store) {
+            const storeList = document.getElementById('storeList');
+            const listItem = document.createElement('div');
+            listItem.className = 'store-item';
+            listItem.innerHTML = `
+                <h3>${store.name}</h3>
+                <p><i class="fas fa-map-marker-alt"></i> ${store.address}</p>
+                <p><i class="fas fa-tag"></i> ${store.offers.length} offers available</p>
+            `;
+            listItem.onclick = () => {
+                map.setView(store.coordinates, 13);
+                markers.forEach(marker => {
+                    if (marker.getLatLng().lat === store.coordinates[0] && 
+                        marker.getLatLng().lng === store.coordinates[1]) {
+                        marker.openPopup();
+                    }
+                });
+            };
+            storeList.appendChild(listItem);
+        }
+
+        // Add store card
+        function addStoreCard(store) {
+            const storesContainer = document.getElementById('storesContainer');
+            const card = document.createElement('div');
+            card.className = 'store-card';
+            card.innerHTML = `
+                <div class="store-image" style="background-image: url('${store.image}')"></div>
+                <div class="store-content">
+                    <h3>${store.name}</h3>
+                    <p><i class="fas fa-map-marker-alt"></i> ${store.address}</p>
+                    <div style="margin-top: 10px;">
+                        ${store.offers.map(offer => `
+                            <div class="offer">
+                                <strong>${offer.title}</strong>
+                                <p>${offer.discount}</p>
+                                <p>${offer.description || ''}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            storesContainer.appendChild(card);
+        }
+
+        // Clear markers
+        function clearMarkers() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+        }
+
+        // Initialize stores
+        function initStores() {
+            console.log('Initializing stores...');
+            try {
+                clearMarkers();
+                document.getElementById('storeList').innerHTML = '';
+                document.getElementById('storesContainer').innerHTML = '';
+
+                stores.forEach(store => {
+                    addMarker(store);
+                    addToList(store);
+                    addStoreCard(store);
+                });
+                console.log('Stores initialized successfully');
+                hideLoading();
+            } catch (error) {
+                console.error('Error initializing stores:', error);
+                hideLoading();
+            }
+        }
+
+        // Show loading
+        function showLoading() {
+            document.querySelector('.loading').classList.add('active');
+        }
+
+        // Hide loading
+        function hideLoading() {
+            document.querySelector('.loading').classList.remove('active');
+        }
+
+        // Simple filter function
+        function filterStores() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            const offerType = document.getElementById('offerFilter').value;
+
+            showLoading();
+
+            const filteredStores = stores.filter(store => {
+                const matchesSearch = !searchTerm || 
+                    store.name.toLowerCase().includes(searchTerm) ||
+                    store.address.toLowerCase().includes(searchTerm);
+                const matchesCategory = !category || store.category === category;
+                const matchesOffer = !offerType || 
+                    store.offers.some(offer => offer.type === offerType);
+
+                return matchesSearch && matchesCategory && matchesOffer;
+            });
+
+            clearMarkers();
+            document.getElementById('storeList').innerHTML = '';
+            document.getElementById('storesContainer').innerHTML = '';
+
+            filteredStores.forEach(store => {
+                addMarker(store);
+                addToList(store);
+                addStoreCard(store);
+            });
+
+            hideLoading();
+        }
+
+
+         // Get user location
+         function getUserLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const userLocation = [position.coords.latitude, position.coords.longitude];
+                        map.setView(userLocation, 11);
+                        L.marker(userLocation, {
+                            icon: L.divIcon({
+                                html: '<i class="fas fa-user-circle" style="color: #3498db; font-size: 24px;"></i>',
+                                className: 'user-marker',
+                                iconSize: [24, 24]
+                            })
+                        }).addTo(map);
+                    },
+                    error => {
+                        alert('Unable to get your location. Please try again.');
+                        log('Geolocation error: ' + error.message);
+                    }
+                );
+            } else {
+                alert('Geolocation is not supported by your browser');
+                log('Geolocation not supported');
+            }
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded, starting initialization...');
+            showLoading();
+            
+            // Add event listeners
+            document.getElementById('searchInput').addEventListener('input', filterStores);
+            document.getElementById('categoryFilter').addEventListener('change', filterStores);
+            document.getElementById('offerFilter').addEventListener('change', filterStores);
+
+            // Initialize map first
+            if (initMap()) {
+                // Then initialize stores
+                setTimeout(() => {
+                    initStores();
+                }, 500);
+            } else {
+                hideLoading();
+                alert('Error initializing map. Please refresh the page.');
+            }
+        });
+    
+
+
+    </script>
+</body>
+</html>

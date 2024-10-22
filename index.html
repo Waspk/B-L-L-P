@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fashion Store Locator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --background: #f8f9fa;
+            --text: #2c3e50;
+            --shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .hero {
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('/api/placeholder/1920/400');
+            background-size: cover;
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .map-container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            height: 500px;
+            margin: 20px 0;
+        }
+
+        #map {
+            height: 100%;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+        }
+
+        .store-list {
+            background: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .store-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .store-item:hover {
+            background: var(--background);
+            transform: translateX(5px);
+        }
+
+        .store-item.active {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .stores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .store-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .store-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .store-image {
+            height: 200px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .store-content {
+            padding: 20px;
+        }
+
+        .store-card h3 {
+            color: var(--text);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .offer-tag {
+            background: var(--accent);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+        }
+
+        .store-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin: 10px 0;
+            color: #666;
+        }
+
+        .offer-list {
+            margin-top: 15px;
+        }
+
+        .offer {
+            background: var(--background);
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .btn {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            float: right;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .map-container {
+                grid-template-columns: 1fr;
+            }
+
+            .store-list {
+                height: 300px;
+            }
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-tshirt"></i>
+                Fashion Store Locator
+            </div>
+            <div class="nav-links">
+                <button class="btn" onclick="getUserLocation()">
+                    <i class="fas fa-location-arrow"></i>
+                    Find Nearest Store
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="hero">
+        <h1>Find Your Style Nearby</h1>
+        <p>Discover amazing deals at our locations nationwide</p>
+    </div>
+
+    <div class="container">
+        <div class="filters">
+            <div class="filter-group">
+                <label>Search</label>
+                <input type="text" id="searchInput" placeholder="Search stores...">
+            </div>
+            <div class="filter-group">
+                <label>Category</label>
+                <select id="categoryFilter">
+                    <option value="">All Categories</option>
+                    <option value="casual">Casual Wear</option>
+                    <option value="formal">Formal Wear</option>
+                    <option value="sports">Sports Wear</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Offer Type</label>
+                <select id="offerFilter">
+                    <option value="">All Offers</option>
+                    <option value="clearance">Clearance</option>
+                    <option value="seasonal">Seasonal</option>
+                    <option value="special">Special Deals</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Distance</label>
+                <select id="distanceFilter">
+                    <option value="">Any Distance</option>
+                    <option value="5">Within 5 miles</option>
+                    <option value="10">Within 10 miles</option>
+                    <option value="20">Within 20 miles</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="store-list" id="storeList">
+                <!-- Store list items will be added here -->
+            </div>
+        </div>
+
+        <div class="stores-grid" id="storesContainer">
+            <!-- Store cards will be added here -->
+        </div>
+    </div>
+
+    <div class="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="modal" id="storeModal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced store data with more details
+        const stores = [
+            {
+                id: 1,
+                name: "Downtown Fashion Hub",
+                address: "123 Main St, New York, NY",
+                coordinates: [40.7128, -74.0060],
+                image: "/api/placeholder/400/300",
+                category: "casual",
+                phone: "(212) 555-0123",
+                hours: "Mon-Sat: 10AM-9PM, Sun: 11AM-7PM",
+                offers: [
+                    {
+                        type: "clearance",
+                        title: "Summer Clearance",
+                        discount: "50% OFF",
+                        description: "All summer collection items"
+                    },
+                    {
+                        type: "seasonal",
+                        title: "New Arrivals",
+                        discount: "20% OFF",
+                        description: "Fall collection pre-sale"
+                    }
+                ]
+            },
+            {
+                id: 2,
+                name: "Fashion Valley Store",
+                address: "456 Fashion Ave, Los Angeles, CA",
+                coordinates: [34.0522, -118.2437],
+                image: "/api/placeholder/400/300",
+                category: "formal",
+                phone: "(323) 555-0123",
+                hours: "Mon-Sun: 10AM-10PM",
+                offers: [
+                    {
+                        type: "special",
+                        title: "Weekend Special",
+                        discount: "30% OFF",
+                        description: "All formal wear"
+                    }
+                ]
+            },
+            {
+                id: 3,
+                name: "Sports Fashion Center",
+                address: "789 Active St, Chicago, IL",
+                coordinates: [41.8781, -87.6298],
+                image: "/api/placeholder/400/300",
+                category: "sports",
+                phone: "(312) 555-0123",
+                hours: "Mon-Sat: 9AM-8PM, Sun: 10AM-6PM",
+                offers: [
+                    {
+                        type: "seasonal",
+                        title: "Sports Gear Sale",
+                        discount: "40% OFF",
+                        description: "Selected sports clothing"
+                    }
+                ]
+            },
+
+            {
+                id: 1,
+                name: "Downtown Fashion Hub",
+                address: "123 Main St, New York, NY",
+                coordinates: [40.7128, -74.0060],
+                image: "/api/placeholder/400/300",
+                category: "casual",
+                phone: "(212) 555-0123",
+                hours: "Mon-Sat: 10AM-9PM, Sun: 11AM-7PM",
+                offers: [
+                    {
+                        type: "clearance",
+                        title: "Summer Clearance",
+                        discount: "50% OFF",
+                        description: "All summer collection items"
+                    },
+                    {
+                        type: "seasonal",
+                        title: "New Arrivals",
+                        discount: "20% OFF",
+                        description: "Fall collection pre-sale"
+                    }
+                ]
+            },
+
+            {
+                id: 1,
+                name: "Downtown Fashion Hub",
+                address: "123 Main St, New York, NY",
+                coordinates: [40.7128, -74.0060],
+                image: "/api/placeholder/400/300",
+                category: "casual",
+                phone: "(212) 555-0123",
+                hours: "Mon-Sat: 10AM-9PM, Sun: 11AM-7PM",
+                offers: [
+                    {
+                        type: "clearance",
+                        title: "Summer Clearance",
+                        discount: "50% OFF",
+                        description: "All summer collection items"
+                    },
+                    {
+                        type: "seasonal",
+                        title: "New Arrivals",
+                        discount: "20% OFF",
+                        description: "Fall collection pre-sale"
+                    }
+                ]
+            },
+
+            {
+                id: 1,
+                name: "Downtown Fashion Hub",
+                address: "123 Main St, New York, NY",
+                coordinates: [40.7128, -74.0060],
+                image: "/api/placeholder/400/300",
+                category: "casual",
+                phone: "(212) 555-0123",
+                hours: "Mon-Sat: 10AM-9PM, Sun: 11AM-7PM",
+                offers: [
+                    {
+                        type: "clearance",
+                        title: "Summer Clearance",
+                        discount: "50% OFF",
+                        description: "All summer collection items"
+                    },
+                    {
+                        type: "seasonal",
+                        title: "New Arrivals",
+                        discount: "20% OFF",
+                        description: "Fall collection pre-sale"
+                    }
+                ]
+            },
+        ];
+
+        let map;
+        let markers = [];
+        let userMarker;
+        let userLocation;
+
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([39.8283, -98.5795], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        // Initialize store display
+        function initStores() {
+            showLoading();
+            setTimeout(() => {
+                updateStoreDisplay(stores);
+                hideLoading();
+            }, 500);
+        }
+
+        // Update store display based on filters
+        function updateStoreDisplay(filteredStores) {
+            const storeList = document.getElementById('storeList');
+            const storesContainer = document.getElementById('storesContainer');
+            
+            // Clear existing displays
+            storeList.innerHTML = '';
+            storesContainer.innerHTML = '';
+            clearMarkers();
+
+            filteredStores.forEach(store => {
+                // Add marker
+                addMarker(store);
+                
+                // Add to list
+                addToList(store);
+                
+                // Add store card
+                addStoreCard(store);
+            });
+
+            if (filteredStores.length === 0) {
+                storeList.innerHTML = '<div class="store-item">No stores found matching your criteria</div>';
+                storesContainer.innerHTML = '<div class="store-card"><div class="store-content">No stores found matching your criteria</div></div>';
+            }
+        }
+
+        // Add marker to map
+        function addMarker(store) {
+            const marker = L.marker(store.coordinates)
+                .bindPopup(createPopupContent(store));
+            marker.addTo(map);
+            markers.push(marker);
+        }
+
+        // Create popup content
+        function createPopupContent(store) {
+            return 
+                <div class="popup-content">
+                    <h3>${store.name}</h3>
+                    <p>${store.address}</p>
+                    <button class="btn" onclick="showStoreDetails(${store.id})">
+                        <i class="fas fa-info-circle"></i> More Info
+                    </button>
+                </div>
+                }
+
+                <!-- Previous HTML and CSS code remains exactly the same -->
+
+
+    // Continue from where we left off with the popup content
+    function createPopupContent(store) {
+        return `
+            <div style="padding: 10px; max-width: 200px;">
+                <h3 style="margin-bottom: 10px;">${store.name}</h3>
+                <p style="margin-bottom: 5px;"><i class="fas fa-map-marker-alt"></i> ${store.address}</p>
+                <p style="margin-bottom: 5px;"><i class="fas fa-phone"></i> ${store.phone}</p>
+                <p style="margin-bottom: 10px;"><i class="fas fa-clock"></i> ${store.hours}</p>
+                <button class="btn" onclick="showStoreDetails(${store.id})">
+                    View Details
+                </button>
+            </div>
+        `;
+    }
+
+    // Add store to list
+    function addToList(store) {
+        const storeList = document.getElementById('storeList');
+        const listItem = document.createElement('div');
+        listItem.className = 'store-item';
+        listItem.innerHTML = `
+            <h3>${store.name}</h3>
+            <p><i class="fas fa-map-marker-alt"></i> ${store.address}</p>
+            <p><i class="fas fa-tag"></i> ${store.offers.length} offers available</p>
+        `;
+        listItem.onclick = () => {
+            map.setView(store.coordinates, 13);
+            markers.forEach(marker => {
+                if (marker.getLatLng().lat === store.coordinates[0] && 
+                    marker.getLatLng().lng === store.coordinates[1]) {
+                    marker.openPopup();
+                }
+            });
+            // Set active state
+            document.querySelectorAll('.store-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            listItem.classList.add('active');
+        };
+        storeList.appendChild(listItem);
+    }
+
+    // Add store card
+    function addStoreCard(store) {
+        const storesContainer = document.getElementById('storesContainer');
+        const card = document.createElement('div');
+        card.className = 'store-card';
+        card.innerHTML = `
+            <div class="store-image" style="background-image: url('${store.image}')"></div>
+            <div class="store-content">
+                <h3>
+                    <i class="fas fa-store"></i>
+                    ${store.name}
+                    <span class="offer-tag">${store.offers.length} Offers</span>
+                </h3>
+                <div class="store-info">
+                    <p><i class="fas fa-map-marker-alt"></i> ${store.address}</p>
+                    <p><i class="fas fa-phone"></i> ${store.phone}</p>
+                    <p><i class="fas fa-clock"></i> ${store.hours}</p>
+                </div>
+                <div class="offer-list">
+                    ${store.offers.map(offer => `
+                        <div class="offer">
+                            <h4>${offer.title}</h4>
+                            <p>${offer.discount} - ${offer.description}</p>
+                        </div>
+                    `).join('')}
+                </div>
+                <button class="btn" onclick="showStoreDetails(${store.id})">
+                    <i class="fas fa-info-circle"></i>
+                    View Details
+                </button>
+            </div>
+        `;
+        storesContainer.appendChild(card);
+    }
+
+    // Show store details modal
+    function showStoreDetails(storeId) {
+        const store = stores.find(s => s.id === storeId);
+        if (!store) return;
+
+        const modal = document.getElementById('storeModal');
+        const modalContent = document.getElementById('modalContent');
+        
+        modalContent.innerHTML = `
+            <h2>${store.name}</h2>
+            <div style="margin: 20px 0;">
+                <img src="${store.image}" alt="${store.name}" style="width: 100%; border-radius: 8px;">
+            </div>
+            <div class="store-info">
+                <p><i class="fas fa-map-marker-alt"></i> ${store.address}</p>
+                <p><i class="fas fa-phone"></i> ${store.phone}</p>
+                <p><i class="fas fa-clock"></i> ${store.hours}</p>
+            </div>
+            <h3>Current Offers</h3>
+            ${store.offers.map(offer => `
+                <div class="offer">
+                    <h4>${offer.title}</h4>
+                    <p>${offer.discount} - ${offer.description}</p>
+                </div>
+            `).join('')}
+            <button class="btn" onclick="getDirections(${store.coordinates[0]}, ${store.coordinates[1]})">
+                <i class="fas fa-directions"></i>
+                Get Directions
+            </button>
+        `;
+
+        modal.style.display = 'flex';
+    }
+
+    // Filter stores
+    function filterStores() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const category = document.getElementById('categoryFilter').value;
+        const offerType = document.getElementById('offerFilter').value;
+        const distance = document.getElementById('distanceFilter').value;
+
+        showLoading();
+
+        setTimeout(() => {
+            const filteredStores = stores.filter(store => {
+                const matchesSearch = store.name.toLowerCase().includes(searchTerm) ||
+                                   store.address.toLowerCase().includes(searchTerm);
+                const matchesCategory = !category || store.category === category;
+                const matchesOffer = !offerType || 
+                                   store.offers.some(offer => offer.type === offerType);
+                const matchesDistance = !distance || 
+                                     (userLocation && calculateDistance(userLocation, store.coordinates) <= distance);
+
+                return matchesSearch && matchesCategory && matchesOffer && matchesDistance;
+            });
+
+            updateStoreDisplay(filteredStores);
+            hideLoading();
+        }, 300);
+    }
+
+    // Calculate distance between two points
+    function calculateDistance(point1, point2) {
+        const R = 3958.8; // Earth's radius in miles
+        const lat1 = point1[0] * Math.PI / 180;
+        const lat2 = point2[0] * Math.PI / 180;
+        const deltaLat = (point2[0] - point1[0]) * Math.PI / 180;
+        const deltaLon = (point2[1] - point1[1]) * Math.PI / 180;
+
+        const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+                Math.cos(lat1) * Math.cos(lat2) *
+                Math.sin(deltaLon/2) * Math.sin(deltaLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        return R * c;
+    }
+
+    // Get user's location
+    function getUserLocation() {
+        if (navigator.geolocation) {
+            showLoading();
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    userLocation = [position.coords.latitude, position.coords.longitude];
+                    
+                    // Remove existing user marker if any
+                    if (userMarker) {
+                        map.removeLayer(userMarker);
+                    }
+
+                    // Add user marker
+                    userMarker = L.marker(userLocation, {
+                        icon: L.divIcon({
+                            html: '<i class="fas fa-user-circle" style="color: #3498db; font-size: 24px;"></i>',
+                            className: 'user-marker',
+                            iconSize: [24, 24]
+                        })
+                    }).addTo(map);
+
+                    // Center map on user location
+                    map.setView(userLocation, 11);
+                    
+                    // Reapply filters
+                    filterStores();
+                    hideLoading();
+                },
+                error => {
+                    hideLoading();
+                    alert('Unable to get your location. Please try again.');
+                }
+            );
+        } else {
+            alert('Geolocation is not supported by your browser');
+        }
+    }
+
+    // Get directions
+    function getDirections(lat, lng) {
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
+    }
+
+    // Clear all markers
+    function clearMarkers() {
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+    }
+
+    // Show loading spinner
+    function showLoading() {
+        document.querySelector('.loading').classList.add('active');
+    }
+
+    // Hide loading spinner
+    function hideLoading() {
+        document.querySelector('.loading').classList.remove('active');
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+        initStores();
+
+        // Add filter event listeners
+        document.getElementById('searchInput').addEventListener('input', filterStores);
+        document.getElementById('categoryFilter').addEventListener('change', filterStores);
+        document.getElementById('offerFilter').addEventListener('change', filterStores);
+        document.getElementById('distanceFilter').addEventListener('change', filterStores);
+
+        // Modal close button
+        document.querySelector('.close').addEventListener('click', () => {
+            document.getElementById('storeModal').style.display = 'none';
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('storeModal');
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+</script>
+</body>
+</html>
